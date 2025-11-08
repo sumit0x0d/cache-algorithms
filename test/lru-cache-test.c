@@ -4,8 +4,8 @@
 
 #include <lru-cache.h>
 
-int _compare_int(const void *data1, const void *data2, void *uData);
-size_t _hash_int(const void *data, const size_t bCount, void *uData);
+HashTableCompare _CompareInt(const void *data1, const void *data2, void *user_data);
+size_t _HashInt(const void *data, const size_t bucket_count, void *user_data);
 
 int main(void)
 {
@@ -14,17 +14,23 @@ int main(void)
      LruCacheCreateInfo lccInfo = {
           .data_size = sizeof(int),
           .capacity = 100,
-          .hash = _hash_int,
-          .compare = _compare_int
-     };   
+          .hash_callback = {
+               .function = _HashInt,
+               .user_data = NULL
+          },
+          .compare_callback = {
+               .function = _CompareInt,
+               .user_data = NULL
+          }
+     };
      LruCache *lCache = LruCache_Create(&lccInfo);
      LruCache_Insert(lCache, &x);
      return 0;
 }
 
-int _compare_int(const void *data1, const void *data2, void *uData)
+int _CompareInt(const void *data1, const void *data2, void *user_data)
 {
-     (void)uData;
+     (void)user_data;
      if (*(int *)data1 < *(int *)data2) {
           return -1;
      } else if (*(int *)data1 > *(int *)data2) {
@@ -33,8 +39,8 @@ int _compare_int(const void *data1, const void *data2, void *uData)
      return 0;
 }
 
-size_t _hash_int(const void *data, size_t bCount, void *uData)
+size_t _HashInt(const void *data, size_t bucket_count, void *user_data)
 {
-     (void)uData;
-     return *(int *)data % bCount;
+     (void)user_data;
+     return *(int *)data % bucket_count;
 }

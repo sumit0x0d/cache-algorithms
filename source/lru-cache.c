@@ -1,62 +1,64 @@
-#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <doubly-linked-list.h>
-#include <hash-table.h>
 #include <lru-cache.h>
-
-typedef LruCacheCreateInfo CreateInfo;
-typedef LruCacheHash Hash;
-typedef LruCacheCompare Compare;
 
 struct lru_cache {
      DoublyLinkedList *doubly_linked_list;
      HashTable *hash_table;
-     void *user_data;
      size_t capacity;
 };
 
-LruCache *LruCache_Create(CreateInfo *cInfo)
+LruCache *LruCache_Create(LruCacheCreateInfo *create_info)
 {
-     LruCache *lCache = (LruCache *)malloc(sizeof (LruCache));
-     assert(lCache);
-     lCache->doubly_linked_list = DoublyLinkedList_Create(cInfo->data_size);
-     lCache->hash_table = HashTable_Create(cInfo->data_size, sizeof(DoublyLinkedListNode *), cInfo->capacity * cInfo->capacity, cInfo->hash,
-                                           cInfo->compare, NULL);
-     lCache->user_data = cInfo->user_data;
-     lCache->capacity = cInfo->capacity;
-     return lCache;
-}
-
-void LruCache_Destroy(LruCache *lCache)
-{
-     HashTable_Destroy(lCache->hash_table);
-     DoublyLinkedList_Destroy(lCache->doubly_linked_list);
-     free(lCache);
-}
-
-void LruCache_Insert(LruCache *lCache, void *data)
-{
-     HashTablePair *htPair = HashTable_Search(lCache->hash_table, data);
-     if (htPair) {
-          void *value = HashTablePair_GetValue(htPair);
-          DoublyLinkedList_Remove(lCache->doubly_linked_list, value);
+     LruCache *cache;
+     
+     cache = (LruCache *)malloc(sizeof (LruCache));
+     if (cache) {
+          return NULL;
      }
-     DoublyLinkedList_PushHead(lCache->doubly_linked_list, data);
-     DoublyLinkedListNode *hdllNode = DoublyLinkedList_GetHead(lCache->doubly_linked_list);
-     HashTable_Insert(lCache->hash_table, data, hdllNode);
-     if (DoublyLinkedList_GetSize(lCache->doubly_linked_list) == lCache->capacity) {
-          DoublyLinkedListNode *tdllNode = DoublyLinkedList_GetTail(lCache->doubly_linked_list);
-          void *key = DoublyLinkedListNode_GetData(tdllNode);
-          HashTable_Remove(lCache->hash_table, key);
-          DoublyLinkedList_PopTail(lCache->doubly_linked_list);
-          return;
+     
+     cache->doubly_linked_list = DoublyLinkedList_Create(create_info->data_size);
+     cache->capacity = create_info->capacity * create_info->capacity;
+     cache->hash_table = HashTable_Create(create_info->data_size, sizeof (DoublyLinkedListNode *),
+          cache->capacity, create_info->hash_callback, create_info->compare_callback);
+
+     return cache;
+}
+
+void LruCache_Destroy(LruCache *cache)
+{
+     HashTable_Destroy(cache->hash_table);
+     DoublyLinkedList_Destroy(cache->doubly_linked_list);
+     free(cache);
+}
+
+void LruCache_Insert(LruCache *cache, void *data)
+{
+     HashTablePair *pair;
+     DoublyLinkedListNode *node;
+     void *key;
+     
+     key = data;
+     pair = HashTable_Search(cache->hash_table, key);
+
+     if (pair) {
+          node = HashTable_GetValue(pair);
+          DoublyLinkedList_RemoveNode(cache->doubly_linked_list, node);
+     }
+     
+     DoublyLinkedList_PushHead(cache->doubly_linked_list, data);
+     HashTable_Insert(cache->hash_table, data, DoublyLinkedList_GetHead(cache->doubly_linked_list));
+     
+     if (DoublyLinkedList_GetSize(cache->doubly_linked_list) == cache->capacity) {
+          node = DoublyLinkedList_GetTail(cache->doubly_linked_list);
+          key = DoublyLinkedList_GetNodeData(node);
+          HashTable_Remove(cache->hash_table, key);
+          DoublyLinkedList_PopTail(cache->doubly_linked_list);
      }
 }
 
-void *LruCache_Search(LruCache *lCache, void *data)
-{
-     HashTablePair *htPair = HashTable_Search(lCache->hash_table, data);
-     return HashTablePair_GetKey(htPair);
+void *LruCache_Search(LruCache *cache, void *data)
+{    
+     return HashTable_GetKey(HashTable_Search(cache->hash_table, data));
 }

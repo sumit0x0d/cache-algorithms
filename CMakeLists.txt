@@ -8,14 +8,14 @@ set(CMAKE_SHARED_LIBRARY_PREFIX "")
 
 add_compile_options(-Wall -Wextra -g -Werror)
 
-add_subdirectory(../data-structures data-structures EXCLUDE_FROM_ALL)
-add_subdirectory(source)
+add_subdirectory(library/data-structures data-structures EXCLUDE_FROM_ALL)
+add_library(lru-cache SHARED source/lru-cache.c)
 
 target_link_libraries(lru-cache PUBLIC doubly-linked-list hash-table)
 target_include_directories(lru-cache PUBLIC data-structures/include include)
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
      enable_testing()
-     add_subdirectory(test)
+     add_executable(lru-cache-test test/lru-cache-test.c)
      target_link_libraries(lru-cache-test PUBLIC lru-cache)
 endif()
